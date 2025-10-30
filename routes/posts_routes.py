@@ -1,5 +1,11 @@
-from config.security import SSH_USERNAME_RES, SSH_PASSWORD_RES, SSH_HOST_RES, \
-    get_current_user, get_user_id
+from config.security import (
+    SSH_HOST_RES,
+    SSH_USERNAME_RES,
+    get_current_user,
+    get_user_id,
+    get_username,
+    get_ssh_connection_kwargs,
+)
 import random
 from fastapi import APIRouter, Form, HTTPException, Depends, UploadFile, File
 from bson import ObjectId
@@ -7,7 +13,6 @@ from typing import List, Optional
 import paramiko
 from model.post_shemas import Post, PostInDB, PostShowed, NewPost
 from config.db import get_database, parse_list, post_collection, users_collection, interactions_collection, lyrics_collection
-from config.security import get_current_user, get_user_id, get_username
 from model.user_shemas import NewUser, User
 from routes.interactions_routes import count_likes, count_saved
 from fastapi import File, UploadFile, HTTPException
@@ -88,8 +93,11 @@ async def upload_post(
         # Configuración de SSH
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
-
+            ssh.connect(
+                hostname=SSH_HOST_RES,
+                username=SSH_USERNAME_RES,
+                **get_ssh_connection_kwargs(),
+            )
             # Verificar si el directorio del usuario existe, si no, crearlo
             if not ssh.exec_command(f"test -d {post_dir}")[1].read():
                 
@@ -201,7 +209,11 @@ async def update_post(
             post_dir = f"/var/www/html/beatnow/{user_id}/posts/{post_id}/"
             with paramiko.SSHClient() as ssh:
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+                ssh.connect(
+                    hostname=SSH_HOST_RES,
+                    username=SSH_USERNAME_RES,
+                    **get_ssh_connection_kwargs(),
+                )
                 if cover_file:
                     if cover_format in ["jpg","jpeg"]:
                         cover_file_path = os.path.join(post_dir, "caratula.jpg")

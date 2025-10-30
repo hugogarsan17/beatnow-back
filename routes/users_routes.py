@@ -9,8 +9,21 @@ from requests import post
 from model.post_shemas import PostInDB
 from model.user_shemas import NewUser, User, UserInDB, UserProfile
 from model.lyrics_shemas import Lyrics, LyricsInDB
-from config.security import  get_current_user_without_confirmation, get_lyric_id, get_post_id_saved, get_user, get_username, guardar_log, SSH_USERNAME_RES, SSH_PASSWORD_RES, SSH_HOST_RES, \
-    get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_user_id
+from config.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    SSH_HOST_RES,
+    SSH_USERNAME_RES,
+    create_access_token,
+    get_current_user,
+    get_current_user_without_confirmation,
+    get_lyric_id,
+    get_post_id_saved,
+    get_ssh_connection_kwargs,
+    get_user,
+    get_user_id,
+    get_username,
+    guardar_log,
+)
 from config.db import parse_list, users_collection, interactions_collection, get_database, lyrics_collection, follows_collection, post_collection
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import File, HTTPException, Depends, UploadFile, status, APIRouter
@@ -40,7 +53,11 @@ async def register(user: NewUser):
     result = await users_collection.insert_one(user_dict)
     with paramiko.SSHClient() as ssh:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+        ssh.connect(
+            hostname=SSH_HOST_RES,
+            username=SSH_USERNAME_RES,
+            **get_ssh_connection_kwargs(),
+        )
         user_id = await get_user_id( user_dict['username'])
         directory_commands = f"sudo mkdir -p /var/www/html/beatnow/{user_id}/photo_profile /var/www/html/beatnow/{user_id}/posts"
         delete_photo = f"sudo cp /var/www/html/res/photo-profile.jpg /var/www/html/beatnow/{user_id}/photo_profile/photo_profile.png"
@@ -76,7 +93,11 @@ async def delete_user(current_user: NewUser = Depends(get_current_user), db=Depe
         # Conexión SSH
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+            ssh.connect(
+                hostname=SSH_HOST_RES,
+                username=SSH_USERNAME_RES,
+                **get_ssh_connection_kwargs(),
+            )
 
             # Eliminar la carpeta del usuario en el servidor
             user_dir = f"/var/www/html/beatnow/{user_id}"
@@ -285,7 +306,11 @@ async def delete_photo_profile(current_user: NewUser = Depends(get_current_user)
         # Establish SSH connection and perform the operation
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+            ssh.connect(
+                hostname=SSH_HOST_RES,
+                username=SSH_USERNAME_RES,
+                **get_ssh_connection_kwargs(),
+            )
 
             # Command to replace user's photo profile with default
             command = f"sudo cp {default_photo_path} {user_photo_dir}/photo_profile.png"
@@ -320,7 +345,11 @@ async def change_photo_profile(file: UploadFile = File(...), current_user: NewUs
         # Establish SSH connection
         with paramiko.SSHClient() as ssh:
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+            ssh.connect(
+                hostname=SSH_HOST_RES,
+                username=SSH_USERNAME_RES,
+                **get_ssh_connection_kwargs(),
+            )
 
             # Verify if the user's directory exists, if not, create it
             mkdir_command = f"test -d {user_photo_dir} || sudo mkdir -p {user_photo_dir}"

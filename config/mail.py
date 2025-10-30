@@ -2,15 +2,25 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
-EMAIL_SENDER = 'beatnowinfo@gmail.com'
-EMAIL_PASSWORD = 'qowkdxcphexfjjyr'
+from config.settings import SettingsError, get_settings
 
+try:
+    settings = get_settings()
+except SettingsError as exc:
+    raise RuntimeError("Failed to load mail configuration") from exc
+
+
+def _get_email_credentials() -> tuple[str, str]:
+    if not settings.email_sender or not settings.email_password:
+        raise RuntimeError("Email credentials are not configured")
+    return settings.email_sender, settings.email_password
 
 def send_email(email_receiver: str, subject: str, body: str):
     try:
         print("Iniciando la creación del mensaje de correo electrónico.")
         em = EmailMessage()
-        em['From'] = EMAIL_SENDER
+        email_sender, email_password = _get_email_credentials()
+        em['From'] = email_sender
         em['To'] = email_receiver
         em['Subject'] = subject
         em.add_alternative(body, subtype='html')
@@ -26,7 +36,7 @@ def send_email(email_receiver: str, subject: str, body: str):
         
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
             print("Conectando al servidor SMTP de Gmail.")
-            smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            smtp.login(email_sender, email_password)
             print("Inicio de sesión exitoso.")
             
             print("Enviando mensaje.")

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, requests
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 import paramiko
 import requests  # Importación correcta
 
-from config.security import SSH_HOST_RES, SSH_PASSWORD_RES, SSH_USERNAME_RES
+from config.security import SSH_HOST_RES, SSH_USERNAME_RES, get_ssh_connection_kwargs
 
 # Iniciar router
 router = APIRouter()
@@ -16,7 +16,11 @@ async def download_android_apk():
     try:
         # Haz la petición al URL y asegúrate de hacer stream para manejar grandes archivos
         response = requests.get(apk_url, stream=True)
-        return StreamingResponse(response.iter_content(32 * 1024), media_type="application/vnd.android.package-archive", headers={"Content-Disposition": "attachment; filename=beatnow_app.apk"})
+        return StreamingResponse(
+            response.iter_content(32 * 1024),
+            media_type="application/vnd.android.package-archive",
+            headers={"Content-Disposition": "attachment; filename=beatnow_app.apk"},
+        )
     except requests.RequestException as e:
         # Maneja posibles errores en la petición
         raise HTTPException(status_code=500, detail=str(e))
@@ -26,7 +30,7 @@ async def download_latest_apk():
     # Iniciar la conexión SSH
     with paramiko.SSHClient() as ssh:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, password=SSH_PASSWORD_RES)
+        ssh.connect(hostname=SSH_HOST_RES, username=SSH_USERNAME_RES, **get_ssh_connection_kwargs())
 
         # Comando para listar archivos y obtener el más reciente
         stdin, stdout, stderr = ssh.exec_command(f"ls -t {APK_DIRECTORY}/*")
