@@ -33,7 +33,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
  
 # Configuración de logs
-logging.basicConfig(filename='app.log', level=logging.INFO)
+import logging, os, sys
+from logging.handlers import RotatingFileHandler
+
+fmt = '%(asctime)s %(levelname)s %(name)s %(message)s'
+handlers = [logging.StreamHandler(sys.stdout)]  # send logs to journald
+
+# Optional: file logging only if LOG_FILE is set
+log_file = os.getenv("LOG_FILE")
+if log_file:
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    handlers.append(RotatingFileHandler(log_file, maxBytes=10_000_000, backupCount=5))
+
+logging.basicConfig(level=logging.INFO, format=fmt, handlers=handlers)
+
  
 # Configuración de Prometheus
 requests_counter = Counter('requests_total', 'Total number of requests')
